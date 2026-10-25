@@ -1095,6 +1095,30 @@ fn slovenian_locales_and_saved_preference_work_without_changing_the_document() {
 }
 
 #[test]
+fn hebrew_locales_and_saved_preference_work_without_changing_the_document() {
+    needs_catalogs!();
+    let he = lang("he");
+    for tag in ["he", "he-IL", "he_IL.UTF-8", "HE-il", "he-Hebr-IL", "iw", "iw-IL", "iw_IL.UTF-8"] {
+        assert_eq!(lang_from_tag(tag), Some(he), "{tag}");
+    }
+    assert_eq!(first_supported([UNSUPPORTED, "he-IL", "en-US"]), Some(he));
+    assert_eq!(first_supported([UNSUPPORTED, "iw-IL", "en-US"]), Some(he));
+    assert_eq!(normalize_pref("HE"), Some("he"));
+    assert_eq!(he.name(), "עברית");
+    assert!(!he.uses_cjk());
+    let mut app = crate::WordApp::new(wordcraft_engine::Session::new(wordcraft_doc::Document::new()), Default::default());
+    let before = serde_json::to_value(&app.session.doc).unwrap();
+    let result = app.run("ui.language", serde_json::json!({"value": "HE"})).unwrap();
+    assert_eq!(result["effective"], "he");
+    assert_eq!(app.ui.language, "he");
+    assert!(result["available"].as_array().unwrap().iter().any(|l| l["code"] == "he" && l["name"] == "עברית"));
+    assert_eq!(serde_json::to_value(&app.session.doc).unwrap(), before);
+    let saved = serde_json::to_string(&app.ui).unwrap();
+    let restored: crate::UiState = serde_json::from_str(&saved).unwrap();
+    assert_eq!(Lang::from_pref(&restored.language), he);
+}
+
+#[test]
 fn bundled_interface_fonts_cover_slovenian_letters() {
     needs_catalogs!();
     let db = wordcraft_fonts::FontDb::with_font_dirs(Vec::new());

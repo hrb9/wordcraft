@@ -53,12 +53,25 @@ fn craft_fonts(dir: &std::path::Path) -> Result<(String, Vec<String>), String> {
     if !wasm {
         let hebrew = dir.join("fonts/hebrew-manifest.txt");
         println!("cargo::rerun-if-changed={}", hebrew.display());
-        if hebrew.try_exists().unwrap_or(false)
-            && let Err(e) = read_manifest(dir, &hebrew, false, &mut seen_files, &mut out, &mut covered)
-        {
-            println!("cargo::warning=skipping optional Hebrew fonts: {e}");
+        match hebrew.try_exists() {
+            Ok(false) => {}
+            Ok(true) => {
+                let mut he_seen = seen_files.clone();
+                let mut he_out = String::new();
+                let mut he_covered = Vec::new();
+                match read_manifest(dir, &hebrew, false, &mut he_seen, &mut he_out, &mut he_covered) {
+                    Ok(()) => {
+                        seen_files = he_seen;
+                        out.push_str(&he_out);
+                        covered.extend(he_covered);
+                    }
+                    Err(e) => println!("cargo::warning=skipping optional Hebrew fonts: {e}"),
+                }
+            }
+            Err(e) => println!("cargo::warning=skipping optional Hebrew fonts: {}: {e}", hebrew.display()),
         }
     }
+    let _ = seen_files;
     Ok((out, covered))
 }
 

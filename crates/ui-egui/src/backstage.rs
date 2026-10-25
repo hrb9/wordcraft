@@ -39,7 +39,9 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
         app.ui.backstage_page = "home".into();
     }
     let mac = app.integrated_titlebar;
-    egui::Panel::left("backstage_nav")
+    let rtl = crate::i18n::current().rtl();
+    let nav_panel = if rtl && !mac { egui::Panel::right("backstage_nav") } else { egui::Panel::left("backstage_nav") };
+    nav_panel
         .exact_size(200.0)
         // Fixed width, as in Word: without this egui shows a resize handle that does nothing (#502).
         .resizable(false)
@@ -63,9 +65,11 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
                 // the row reads as plain sidebar background next to it, so clicking there must
                 // not also close the File page, same as the macOS chevron fix (#2972) below.
                 let (r, _) = ui.allocate_exact_size(vec2(200.0, 40.0), Sense::hover());
-                let c = pos2(r.min.x + 26.0, r.center().y);
+                let x = if rtl { r.max.x - 26.0 } else { r.min.x + 26.0 };
+                let c = pos2(x, r.center().y);
                 let resp = ui.interact(Rect::from_center_size(c, vec2(22.0, r.height())), ui.scope_id().with("backstage_back"), Sense::click());
-                icons::paint(ui.painter(), Rect::from_center_size(c, vec2(18.0, 18.0)), "chevronLeft", egui::Color32::WHITE, egui::Color32::WHITE);
+                let chevron = if rtl { "chevronRight" } else { "chevronLeft" };
+                icons::paint(ui.painter(), Rect::from_center_size(c, vec2(18.0, 18.0)), chevron, egui::Color32::WHITE, egui::Color32::WHITE);
                 resp
             };
             // Escape in the built-in file browser closes only the browser.
@@ -86,10 +90,15 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
                     ui.painter().rect_filled(r, 0.0, egui::Color32::from_white_alpha(26));
                 }
                 let ink = if on { egui::Color32::WHITE } else { egui::Color32::from_white_alpha(110) };
-                icons::paint(ui.painter(), Rect::from_center_size(pos2(r.min.x + 31.0, r.center().y), vec2(18.0, 18.0)), icon, ink, ink);
+                let (icon_x, text_x, text_align) = if rtl {
+                    (r.max.x - 31.0, r.max.x - 52.0, Align2::RIGHT_CENTER)
+                } else {
+                    (r.min.x + 31.0, r.min.x + 52.0, Align2::LEFT_CENTER)
+                };
+                icons::paint(ui.painter(), Rect::from_center_size(pos2(icon_x, r.center().y), vec2(18.0, 18.0)), icon, ink, ink);
                 ui.painter().text(
-                    pos2(r.min.x + 52.0, r.center().y),
-                    Align2::LEFT_CENTER,
+                    pos2(text_x, r.center().y),
+                    text_align,
                     tl!(label),
                     if active { semibold(14.0) } else { medium(14.0) },
                     ink,
@@ -130,7 +139,8 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
                     if resp.hovered() {
                         ui.painter().rect_filled(r, 0.0, egui::Color32::from_white_alpha(26));
                     }
-                    ui.painter().text(pos2(r.min.x + 22.0, r.center().y), Align2::LEFT_CENTER, tl!(label), regular(13.0), egui::Color32::WHITE);
+                    let (bx, balign) = if rtl { (r.max.x - 22.0, Align2::RIGHT_CENTER) } else { (r.min.x + 22.0, Align2::LEFT_CENTER) };
+                    ui.painter().text(pos2(bx, r.center().y), balign, tl!(label), regular(13.0), egui::Color32::WHITE);
                     if resp.clicked() {
                         if id == "discord" {
                             let _ = app.run("ui.discord", json!({}));
@@ -142,21 +152,24 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
             });
         });
     egui::CentralPanel::default().frame(egui::Frame::NONE.fill(t.ribbon).inner_margin(egui::Margin::symmetric(40, 30))).show(ui, |ui| {
+        let body_layout = egui::Layout::top_down(if rtl { egui::Align::Max } else { egui::Align::Min });
         // The Print page fills the pane and scrolls its settings and its preview itself (#1156).
         if app.ui.backstage_page == "print" {
-            export_page(app, ui);
+            ui.with_layout(body_layout, |ui| export_page(app, ui));
             return;
         }
-        egui::ScrollArea::vertical().show(ui, |ui| match app.ui.backstage_page.as_str() {
-            "home" => home_page(app, ui),
-            "new" => new_page(app, ui),
-            "open" => open_page(app, ui),
-            "saveAs" => save_as_page(app, ui),
-            "info" => info_page(app, ui),
-            "recover" => recovery_page(app, ui),
-            "print" | "export" => export_page(app, ui),
-            "options" => crate::options::page(app, ui),
-            _ => home_page(app, ui),
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            ui.with_layout(body_layout, |ui| match app.ui.backstage_page.as_str() {
+                "home" => home_page(app, ui),
+                "new" => new_page(app, ui),
+                "open" => open_page(app, ui),
+                "saveAs" => save_as_page(app, ui),
+                "info" => info_page(app, ui),
+                "recover" => recovery_page(app, ui),
+                "print" | "export" => export_page(app, ui),
+                "options" => crate::options::page(app, ui),
+                _ => home_page(app, ui),
+            });
         });
     });
 }

@@ -751,6 +751,7 @@ pub fn apply(ctx: &egui::Context, appearance: Appearance) {
     ctx.set_visuals_of(egui::Theme::Light, visuals(&Tokens::light()));
     ctx.set_visuals_of(egui::Theme::Dark, visuals(&Tokens::dark()));
     ctx.all_styles_mut(|s| {
+        s.right_to_left = crate::i18n::current().rtl();
         s.spacing.item_spacing = egui::vec2(6.0, 4.0);
         s.spacing.button_padding = egui::vec2(8.0, 3.0);
         s.spacing.interact_size = egui::vec2(24.0, 22.0);

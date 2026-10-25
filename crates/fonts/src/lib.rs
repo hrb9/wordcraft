@@ -85,7 +85,9 @@ pub fn hebrew_fonts() -> impl Iterator<Item = &'static CraftFont> {
 /// other styles.
 pub fn hebrew_document_fonts() -> Vec<&'static CraftFont> {
     let is_serif = |fam: &str| matches!(fam, "Frank Ruhl Libre" | "David Libre" | "Noto Serif Hebrew" | "Noto Rashi Hebrew");
-    let mut v: Vec<_> = hebrew_fonts().collect();
+    // Cardo and Handjet map Supplementary Private Use Area-A code points (U+F0001..), which would
+    // shadow PUA glyphs and break the cache-miss fixtures in `tests_sysfonts`.
+    let mut v: Vec<_> = hebrew_fonts().filter(|f| !matches!(f.family, "Cardo" | "Handjet")).collect();
     v.sort_by_key(|f| (!is_serif(f.family), f.style != "Regular"));
     v
 }

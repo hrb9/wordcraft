@@ -716,15 +716,66 @@ struct RunFallbackCache {
 const RUN_FALLBACK_CACHE_MAX: usize = 4096;
 const RUN_FALLBACK_CACHE_CHARS: usize = 1 << 20;
 
+/// Whether `family` is a serif document font that should prefer serif Hebrew fallbacks.
+fn is_serif_family(family: &str) -> bool {
+    let f = family.to_ascii_lowercase();
+    (f.contains("serif") && !f.contains("sans"))
+        || matches!(
+            f.as_str(),
+            "times new roman"
+                | "times"
+                | "georgia"
+                | "garamond"
+                | "cambria"
+                | "cambria math"
+                | "constantia"
+                | "palatino"
+                | "palatino linotype"
+                | "book antiqua"
+                | "baskerville old face"
+                | "century"
+                | "century schoolbook"
+                | "bookman old style"
+                | "sitka text"
+                | "sitka"
+                | "caladea"
+                | "david"
+                | "david clm"
+                | "david libre"
+                | "frankruehl"
+                | "frank ruehl clm"
+                | "frank ruhl libre"
+                | "narkisim"
+                | "sbl hebrew"
+                | "ezra sil"
+        )
+}
+
+/// Rank of `family` in [`RTL_FALLBACKS`], promoting serif Hebrew families ahead of
+/// `Noto Sans Hebrew` when the source document face (`prefer_serif`) is serif.
+fn rtl_fallback_rank(family: &str, prefer_serif: bool) -> (usize, usize) {
+    let pos = RTL_FALLBACKS.iter().position(|n| family.eq_ignore_ascii_case(n)).unwrap_or(RTL_FALLBACKS.len());
+    if prefer_serif {
+        const SERIF_HEBREW: &[&str] = &["Frank Ruhl Libre", "David Libre", "Noto Serif Hebrew", "David"];
+        if let Some(serif_idx) = SERIF_HEBREW.iter().position(|n| family.eq_ignore_ascii_case(n))
+            && let Some(sans_pos) = RTL_FALLBACKS.iter().position(|n| n.eq_ignore_ascii_case("Noto Sans Hebrew"))
+        {
+            return (pos.min(sans_pos), serif_idx);
+        }
+        return (pos, SERIF_HEBREW.len());
+    }
+    (pos, 0)
+}
+
 /// Loaded faces other than `exclude`, in fallback order: for right-to-left text the fonts made
 /// for the script first (so a word isn't split across fonts, which breaks Arabic joining); for a
 /// complex-script character `complex` (Thai, Myanmar…) faces with OpenType layout tables, the
 /// script's own families first, as the per-character fallback ranks them; then the fallback
 /// family, upright, nearest to regular weight.
 fn fallback_order(faces: &[Arc<FontFace>], exclude: u32, rtl: bool, complex: Option<char>) -> Vec<&Arc<FontFace>> {
+    let prefer_serif = faces.iter().find(|f| f.id == exclude).is_some_and(|f| is_serif_family(&f.family));
     let mut order: Vec<&Arc<FontFace>> = faces.iter().filter(|f| f.id != exclude).collect();
-    let rank =
-        |f: &FontFace| if rtl { RTL_FALLBACKS.iter().position(|n| f.family.eq_ignore_ascii_case(n)).unwrap_or(RTL_FALLBACKS.len()) } else { 0 };
+    let rank = |f: &FontFace| if rtl { rtl_fallback_rank(&f.family, prefer_serif) } else { (0, 0) };
     let shaping = |f: &FontFace| match complex {
         Some(c) => (!f.has_layout_tables(), crate::fallback_rank(c, &f.family)),
         None => (false, 0),
@@ -1760,16 +1811,17 @@ impl FontDb {
     /// The best loaded face covering `c`, and the number of loaded faces it was chosen from.
     fn loaded_fallback(&self, c: char, exclude: u32) -> (Option<Arc<FontFace>>, usize) {
         let faces = self.read_faces();
+        let prefer_serif = faces.iter().find(|f| f.id == exclude).is_some_and(|f| is_serif_family(&f.family));
         let mut order: Vec<&Arc<FontFace>> = faces.iter().filter(|f| f.id != exclude).collect();
         // Right-to-left letters prefer a font made for the script, so a word isn't split across
         // fonts (that breaks Arabic joining). Emoji prefer a colour emoji font.
         let rank = |f: &FontFace| {
             if crate::is_rtl(c) || arabic_block(c) {
-                RTL_FALLBACKS.iter().position(|n| f.family.eq_ignore_ascii_case(n)).unwrap_or(RTL_FALLBACKS.len())
+                rtl_fallback_rank(&f.family, prefer_serif)
             } else if crate::is_emoji(c) {
-                crate::fallback_rank(c, &f.family)
+                (crate::fallback_rank(c, &f.family), 0)
             } else {
-                0
+                (0, 0)
             }
         };
         // Complex scripts (Myanmar, Khmer, Indic…): a font with OpenType layout tables, preferring

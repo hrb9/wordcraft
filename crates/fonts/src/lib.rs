@@ -75,6 +75,26 @@ pub fn georgian_fonts() -> impl Iterator<Item = &'static CraftFont> {
     CRAFT_FONTS.iter().filter(|f| f.scripts.contains(&"Geor") && f.style == "Regular")
 }
 
+/// The craft-fonts faces for Hebrew (`"Hebr"`), in manifest order. Empty without craft-fonts.
+pub fn hebrew_fonts() -> impl Iterator<Item = &'static CraftFont> {
+    CRAFT_FONTS.iter().filter(|f| f.scripts.contains(&"Hebr"))
+}
+
+/// Hebrew faces in document-fallback order: serif families first (Frank Ruhl Libre, David Libre,
+/// Noto Serif Hebrew), matching the serif default text font, then the others; Regular before
+/// other styles.
+pub fn hebrew_document_fonts() -> Vec<&'static CraftFont> {
+    let is_serif = |fam: &str| matches!(fam, "Frank Ruhl Libre" | "David Libre" | "Noto Serif Hebrew" | "Noto Rashi Hebrew");
+    let mut v: Vec<_> = hebrew_fonts().collect();
+    v.sort_by_key(|f| (!is_serif(f.family), f.style != "Regular"));
+    v
+}
+
+/// The craft-fonts Hebrew (`"Hebr"`) Regular faces for the interface. Empty without craft-fonts.
+pub fn ui_hebrew_fonts() -> impl Iterator<Item = &'static CraftFont> {
+    CRAFT_FONTS.iter().filter(|f| f.scripts.contains(&"Hebr") && f.style == "Regular")
+}
+
 /// The CJK interface faces, Regular styles only (the UI fakes no bold), with the Japanese UI,
 /// Chinese, and Korean faces ordered for the selected interface language. Mixing the faces within
 /// a line would mix glyph styles, so the first face should cover the interface language. Empty
@@ -420,6 +440,21 @@ mod tests {
         for c in "مرحبا پچژگ۱۲۳".chars().filter(|c| !c.is_whitespace()) {
             let fb = db.fallback_for(c, latin.id()).unwrap_or_else(|| panic!("no fallback for {c}"));
             assert_eq!(fb.family, arabic.family, "{c}");
+        }
+    }
+
+    #[test]
+    fn hebrew_falls_back_to_a_craft_fonts_hebrew_face() {
+        if hebrew_fonts().next().is_none() {
+            eprintln!("skipped: no Hebrew face in the optional craft-fonts input");
+            return;
+        }
+        let db = FontDb::with_font_dirs(Vec::new());
+        db.set_system_fallback(false);
+        let latin = db.face(DEFAULT_FAMILY, "Regular");
+        for c in "שלום עולם ברוכים הבאים".chars().filter(|c| !c.is_whitespace()) {
+            let fb = db.fallback_for(c, latin.id()).unwrap_or_else(|| panic!("no fallback for {c}"));
+            assert!(fb.covers(c), "{} covers {c}", fb.family);
         }
     }
 

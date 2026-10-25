@@ -599,6 +599,13 @@ pub const RTL_FALLBACKS: &[&str] = &[
     "Shabnam",
     "Samim",
     "Noto Sans Hebrew",
+    "Noto Serif Hebrew",
+    "David Libre",
+    "Frank Ruhl Libre",
+    "Rubik",
+    "Heebo",
+    "Assistant",
+    "Alef",
     "David",
     "Miriam",
     "Segoe UI",
@@ -614,6 +621,15 @@ pub const RTL_FALLBACKS: &[&str] = &[
     "Noto Naskh Arabic",
     "Noto Sans Arabic",
     "Noto Sans Hebrew",
+    "Noto Serif Hebrew",
+    "David Libre",
+    "Frank Ruhl Libre",
+    "Rubik",
+    "Heebo",
+    "Assistant",
+    "Alef",
+    "SF Hebrew",
+    "Arial Hebrew",
     "Geeza Pro",
     "SF Arabic",
     "Arial",
@@ -622,8 +638,23 @@ pub const RTL_FALLBACKS: &[&str] = &[
 ];
 
 #[cfg(not(any(windows, target_os = "macos")))]
-pub const RTL_FALLBACKS: &[&str] =
-    &["Noto Naskh Arabic", "Noto Sans Arabic", "Noto Sans Hebrew", "Vazirmatn", "Segoe UI", "Arial", "Tahoma", "DejaVu Sans"];
+pub const RTL_FALLBACKS: &[&str] = &[
+    "Noto Naskh Arabic",
+    "Noto Sans Arabic",
+    "Noto Sans Hebrew",
+    "Noto Serif Hebrew",
+    "David Libre",
+    "Frank Ruhl Libre",
+    "Rubik",
+    "Heebo",
+    "Assistant",
+    "Alef",
+    "Vazirmatn",
+    "Segoe UI",
+    "Arial",
+    "Tahoma",
+    "DejaVu Sans",
+];
 
 /// Families tried (when installed) for characters the loaded fonts lack: CJK, symbols, emoji.
 #[cfg(not(target_arch = "wasm32"))]
@@ -655,10 +686,13 @@ const SYSTEM_FALLBACKS: &[&str] = &[
     "Noto Color Emoji",
 ];
 
-/// Arabic-script marks and digits (bidi classes NSM / AN): they belong with the Arabic letters
-/// around them when choosing a fallback font.
+/// Arabic- and Hebrew-script marks and digits (bidi classes NSM / AN): they belong with the
+/// right-to-left letters around them when choosing a fallback font.
 fn arabic_block(c: char) -> bool {
-    matches!(u32::from(c), 0x0600..=0x06FF | 0x0750..=0x077F | 0x08A0..=0x08FF | 0xFB50..=0xFDFF | 0xFE70..=0xFEFF)
+    matches!(
+        u32::from(c),
+        0x0590..=0x05FF | 0x0600..=0x06FF | 0x0750..=0x077F | 0x08A0..=0x08FF | 0xFB1D..=0xFB4F | 0xFB50..=0xFDFF | 0xFE70..=0xFEFF
+    )
 }
 
 #[derive(Default)]
@@ -1087,8 +1121,8 @@ impl FontDb {
     /// `CRAFT_FONTS_DIR`), whose system font scan reads `font_dirs`.
     pub fn with_font_dirs(font_dirs: Vec<std::path::PathBuf>) -> Self {
         let mut faces = Vec::new();
-        let others = crate::CRAFT_FONTS.iter().filter(|f| !f.scripts.contains(&"Jpan"));
-        let craft = crate::japanese_document_fonts().into_iter().chain(others).map(|f| f.bytes);
+        let others = crate::CRAFT_FONTS.iter().filter(|f| !f.scripts.contains(&"Jpan") && !f.scripts.contains(&"Hebr"));
+        let craft = crate::japanese_document_fonts().into_iter().chain(crate::hebrew_document_fonts()).chain(others).map(|f| f.bytes);
         for data in BUNDLED.iter().copied().chain(craft) {
             for f in enumerate_faces(data, MAX_FILE_FACES) {
                 if let Some(mut face) = make_face(FontBytes::Static(data), f.index, f.family, f.style, f.legacy, f.coords) {

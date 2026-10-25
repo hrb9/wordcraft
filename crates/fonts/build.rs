@@ -45,18 +45,42 @@ const REQUIRED_SCRIPTS: &[&str] = &["Jpan", "Hans"];
 
 /// One `CraftFont { .. }` initialiser per manifest line, and the scripts the embedded fonts cover.
 fn craft_fonts(dir: &std::path::Path) -> Result<(String, Vec<String>), String> {
-    let manifest = dir.join("fonts/manifest.txt");
-    println!("cargo::rerun-if-changed={}", manifest.display());
-    let text = std::fs::read_to_string(&manifest).map_err(|e| format!("{}: {e}", manifest.display()))?;
     let wasm = std::env::var("CARGO_CFG_TARGET_ARCH").is_ok_and(|a| a == "wasm32");
     let mut out = String::new();
     let mut covered = Vec::new();
+    let mut seen_files = std::collections::HashSet::new();
+    read_manifest(dir, &dir.join("fonts/manifest.txt"), wasm, &mut seen_files, &mut out, &mut covered)?;
+    if !wasm {
+        let hebrew = dir.join("fonts/hebrew-manifest.txt");
+        println!("cargo::rerun-if-changed={}", hebrew.display());
+        if hebrew.try_exists().unwrap_or(false)
+            && let Err(e) = read_manifest(dir, &hebrew, false, &mut seen_files, &mut out, &mut covered)
+        {
+            println!("cargo::warning=skipping optional Hebrew fonts: {e}");
+        }
+    }
+    Ok((out, covered))
+}
+
+fn read_manifest(
+    dir: &std::path::Path,
+    manifest: &std::path::Path,
+    wasm: bool,
+    seen_files: &mut std::collections::HashSet<String>,
+    out: &mut String,
+    covered: &mut Vec<String>,
+) -> Result<(), String> {
+    println!("cargo::rerun-if-changed={}", manifest.display());
+    let text = std::fs::read_to_string(manifest).map_err(|e| format!("{}: {e}", manifest.display()))?;
     for line in text.lines().map(str::trim).filter(|l| !l.is_empty() && !l.starts_with('#')) {
         let f: Vec<&str> = line.split(" | ").map(str::trim).collect();
         let [family, style, file, scripts, ..] = f.as_slice() else {
             return Err(format!("malformed manifest line: {line}"));
         };
         if wasm && !scripts.split(',').any(|s| s.trim() == "Geor") {
+            continue;
+        }
+        if !seen_files.insert((*file).to_string()) {
             continue;
         }
         let path = dir.join(file).canonicalize().map_err(|e| format!("{file}: {e}"))?;
@@ -70,5 +94,5 @@ fn craft_fonts(dir: &std::path::Path) -> Result<(String, Vec<String>), String> {
             path.display().to_string(),
         );
     }
-    Ok((out, covered))
+    Ok(())
 }

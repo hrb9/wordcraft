@@ -127,7 +127,7 @@ pub static LANGUAGES: [LangInfo; 28] = [
     // Slovenian; `sl`, `sl-SI` and `sl_SI.UTF-8` resolve here.
     LangInfo { code: "sl", prefer_hans: false, editing_lang: None },
     // Hebrew; `he`, `he-IL`, `he_IL.UTF-8` and legacy `iw`/`iw-IL` resolve here.
-    LangInfo { code: "he", prefer_hans: false, editing_lang: None },
+    LangInfo { code: "he", prefer_hans: false, editing_lang: Some("he-IL") },
 ];
 
 /// A language the UI can be shown in: English, or an offered language whose catalogs are embedded.
@@ -171,6 +171,11 @@ impl Lang {
     /// The language's name in itself (its `@id language.name` row), shown in the Options dropdown.
     pub fn name(self) -> &'static str {
         self.i18n().name(self.lang)
+    }
+
+    /// Is the interface written right-to-left (Hebrew, Arabic)?
+    pub fn rtl(self) -> bool {
+        self.i18n().rtl(self.lang) || matches!(self.code(), "he" | "ar")
     }
 
     pub fn prefers_hans(self) -> bool {

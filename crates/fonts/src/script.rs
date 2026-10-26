@@ -189,6 +189,7 @@ mod tests {
         assert_eq!(script_runs(""), vec![0..0]);
     }
 
+    /// Verifies that complex scripts rank dedicated script fonts ahead of generic system fonts.
     #[test]
     fn complex_scripts_prefer_their_own_fonts() {
         assert!(needs_layout_tables('မ') && needs_layout_tables('ក') && needs_layout_tables('क'));

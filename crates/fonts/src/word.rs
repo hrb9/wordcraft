@@ -719,6 +719,7 @@ mod tests {
         assert!(r.synth_bold && r.synth_italic);
     }
 
+    /// Verifies that Hebrew font families substitute appropriate serif or sans Hebrew faces.
     #[test]
     fn hebrew_fonts_substitute_hebrew_faces() {
         for f in [

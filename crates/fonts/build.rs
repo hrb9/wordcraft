@@ -75,6 +75,7 @@ fn craft_fonts(dir: &std::path::Path) -> Result<(String, Vec<String>), String> {
     Ok((out, covered))
 }
 
+/// Parses a craft-fonts manifest file and appends Rust source entries for each eligible face.
 fn read_manifest(
     dir: &std::path::Path,
     manifest: &std::path::Path,

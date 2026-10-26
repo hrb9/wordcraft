@@ -90,19 +90,10 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
                     ui.painter().rect_filled(r, 0.0, egui::Color32::from_white_alpha(26));
                 }
                 let ink = if on { egui::Color32::WHITE } else { egui::Color32::from_white_alpha(110) };
-                let (icon_x, text_x, text_align) = if rtl {
-                    (r.max.x - 31.0, r.max.x - 52.0, Align2::RIGHT_CENTER)
-                } else {
-                    (r.min.x + 31.0, r.min.x + 52.0, Align2::LEFT_CENTER)
-                };
+                let (icon_x, text_x, text_align) =
+                    if rtl { (r.max.x - 31.0, r.max.x - 52.0, Align2::RIGHT_CENTER) } else { (r.min.x + 31.0, r.min.x + 52.0, Align2::LEFT_CENTER) };
                 icons::paint(ui.painter(), Rect::from_center_size(pos2(icon_x, r.center().y), vec2(18.0, 18.0)), icon, ink, ink);
-                ui.painter().text(
-                    pos2(text_x, r.center().y),
-                    text_align,
-                    tl!(label),
-                    if active { semibold(14.0) } else { medium(14.0) },
-                    ink,
-                );
+                ui.painter().text(pos2(text_x, r.center().y), text_align, tl!(label), if active { semibold(14.0) } else { medium(14.0) }, ink);
                 if resp.clicked() {
                     match id {
                         // A document without a file goes to the Save As page (as in Word) instead

@@ -748,6 +748,7 @@ fn is_serif_family(family: &str) -> bool {
                 | "narkisim"
                 | "sbl hebrew"
                 | "ezra sil"
+                | "noto rashi hebrew"
         )
 }
 
@@ -756,7 +757,7 @@ fn is_serif_family(family: &str) -> bool {
 fn rtl_fallback_rank(family: &str, prefer_serif: bool) -> (usize, usize) {
     let pos = RTL_FALLBACKS.iter().position(|n| family.eq_ignore_ascii_case(n)).unwrap_or(RTL_FALLBACKS.len());
     if prefer_serif {
-        const SERIF_HEBREW: &[&str] = &["Frank Ruhl Libre", "David Libre", "Noto Serif Hebrew", "David"];
+        const SERIF_HEBREW: &[&str] = &["Frank Ruhl Libre", "David Libre", "Noto Serif Hebrew", "Noto Rashi Hebrew", "David"];
         if let Some(serif_idx) = SERIF_HEBREW.iter().position(|n| family.eq_ignore_ascii_case(n))
             && let Some(sans_pos) = RTL_FALLBACKS.iter().position(|n| n.eq_ignore_ascii_case("Noto Sans Hebrew"))
         {

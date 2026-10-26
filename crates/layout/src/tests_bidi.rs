@@ -108,6 +108,7 @@ fn ltr_paragraph_with_embedded_persian_word() {
     assert!(h < mim && mim < sin && sin < w, "the Persian word reads right to left between the English ones: {h} {mim} {sin} {w}");
 }
 
+/// Verifies that numbers and Latin words embedded inside a Persian RTL paragraph keep LTR order.
 #[test]
 fn numbers_and_latin_inside_persian_keep_their_order() {
     // "Price 250 toman" in Persian, with a Latin product name and Persian punctuation.
@@ -129,6 +130,7 @@ fn numbers_and_latin_inside_persian_keep_their_order() {
     }
 }
 
+/// Verifies that mixed Hebrew, English and numeric runs in an RTL paragraph lay out in UAX #9 visual order.
 #[test]
 fn hebrew_with_english_and_numbers_lays_out_bidi_correctly() {
     // Hebrew RTL paragraph mixing Hebrew words, an English product name, and numbers.

@@ -24,7 +24,9 @@ pub use kurbo::BezPath;
 pub use script::{fallback_rank, is_emoji, needs_layout_tables, script_fallbacks};
 use skrifa::MetadataProvider;
 use skrifa::instance::Size;
-pub use ui_fallback::{SystemUiFont, is_cjk, system_cjk_ui_font, system_cjk_ui_font_for, ui_needs_system_cjk, ui_uncovered_cjk};
+pub use ui_fallback::{
+    SystemUiFont, is_cjk, system_cjk_ui_font, system_cjk_ui_font_for, system_hebrew_ui_font, ui_needs_system_cjk, ui_uncovered_cjk,
+};
 
 /// A font from the optional craft-fonts build input (https://github.com/storytold/craft-fonts;
 /// empty unless built with `CRAFT_FONTS_DIR`, see `build.rs`).
@@ -429,6 +431,7 @@ mod tests {
         assert!(f2.family.contains("Mincho"), "{f2:?}");
     }
 
+    /// Verifies that Arabic and Persian characters fall back to the embedded craft-fonts Arabic face.
     #[test]
     fn arabic_and_persian_fall_back_to_the_craft_fonts_arabic_face() {
         // #1652: with no system fonts (a headless CLI), Arabic and Persian drew as empty boxes.
@@ -445,6 +448,7 @@ mod tests {
         }
     }
 
+    /// Verifies that Hebrew characters fall back to an embedded craft-fonts Hebrew face.
     #[test]
     fn hebrew_falls_back_to_a_craft_fonts_hebrew_face() {
         if hebrew_fonts().next().is_none() {

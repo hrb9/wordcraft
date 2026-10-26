@@ -556,11 +556,7 @@ pub fn status_bar(app: &mut WordApp, ui: &mut Ui) {
                 return;
             }
             let rtl = crate::i18n::current().rtl();
-            let row_layout = if rtl {
-                egui::Layout::right_to_left(egui::Align::Center)
-            } else {
-                egui::Layout::left_to_right(egui::Align::Center)
-            };
+            let row_layout = if rtl { egui::Layout::right_to_left(egui::Align::Center) } else { egui::Layout::left_to_right(egui::Align::Center) };
             ui.with_layout(row_layout, |ui| {
                 ui.spacing_mut().item_spacing = vec2(14.0, 0.0);
                 let l = app.session.layout();
@@ -637,11 +633,8 @@ pub fn status_bar(app: &mut WordApp, ui: &mut Ui) {
                 let msg_right = ui.cursor().max.x;
                 let mut controls_left = f32::INFINITY;
                 let mut controls_right = f32::NEG_INFINITY;
-                let controls_layout = if rtl {
-                    egui::Layout::left_to_right(egui::Align::Center)
-                } else {
-                    egui::Layout::right_to_left(egui::Align::Center)
-                };
+                let controls_layout =
+                    if rtl { egui::Layout::left_to_right(egui::Align::Center) } else { egui::Layout::right_to_left(egui::Align::Center) };
                 ui.with_layout(controls_layout, |ui| {
                     ui.spacing_mut().item_spacing = vec2(4.0, 0.0);
                     let reading = app.session.view.read_mode;
@@ -745,11 +738,7 @@ pub fn status_bar(app: &mut WordApp, ui: &mut Ui) {
                     let msg_shown = fit_text(ui.painter(), msg, &font, track, t.accent_text, room);
                     if !msg_shown.is_empty() {
                         let w = text_width(ui.painter(), &msg_shown, &font, track, t.accent_text);
-                        let min_pos = if rtl {
-                            pos2(msg_right - (w + 1.0), msg_at.y)
-                        } else {
-                            msg_at
-                        };
+                        let min_pos = if rtl { pos2(msg_right - (w + 1.0), msg_at.y) } else { msg_at };
                         let rect = Rect::from_min_size(min_pos, vec2(w + 1.0, TypeRung::Caption.line_height()));
                         // The whole message is in the tooltip; the bar only has room for the
                         // beginning of it (#2402).

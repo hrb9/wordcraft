@@ -92,6 +92,7 @@ pub trait MeasureExt {
 }
 
 impl MeasureExt for egui::DragValue<'_> {
+    /// Formats and parses this drag value in `unit` using the active locale's decimal separator.
     fn measure(self, unit: Unit) -> Self {
         let sep = decimal();
         self.suffix(unit_suffix(unit))
@@ -101,6 +102,7 @@ impl MeasureExt for egui::DragValue<'_> {
             })
             .custom_parser(move |text| parse_length(text, unit))
     }
+    /// Formats this drag value as blank until edited, then parses the typed length in `unit`.
     fn measure_blank(self, unit: Unit) -> Self {
         self.custom_formatter(|_, _| String::new()).custom_parser(move |text| parse_length(text, unit))
     }
@@ -108,8 +110,10 @@ impl MeasureExt for egui::DragValue<'_> {
 
 /// Regions offered in File › Options › Advanced › Region (any locale tag works through
 /// `file.options`): Letter and A4 countries, decimal point and decimal comma.
-const REGIONS: [&str; 17] =
-    ["en-US", "en-CA", "en-GB", "en-AU", "en-IN", "es-MX", "es-ES", "pt-BR", "fr-FR", "de-DE", "it-IT", "pl-PL", "ru-RU", "he-IL", "ja-JP", "zh-CN", "ko-KR"];
+const REGIONS: [&str; 17] = [
+    "en-US", "en-CA", "en-GB", "en-AU", "en-IN", "es-MX", "es-ES", "pt-BR", "fr-FR", "de-DE", "it-IT", "pl-PL", "ru-RU", "he-IL", "ja-JP", "zh-CN",
+    "ko-KR",
+];
 
 /// The units offered, with their names.
 pub const UNITS: [(Unit, &str); 5] = [
@@ -398,7 +402,6 @@ fn language_name(lang: wordcraft_engine::proof::ProofLang) -> &'static str {
         ProofLang::EsMx => tl!("Spanish (Mexico)"),
         ProofLang::Es419 => tl!("Spanish (Latin America)"),
         ProofLang::EsUy => tl!("Spanish (Uruguay)"),
-        ProofLang::He => tl!("Hebrew"),
         // English uses its bundled word list; Bulgarian and German have no dictionary yet.
         ProofLang::En | ProofLang::EnGb | ProofLang::EnCa | ProofLang::Bg | ProofLang::De | ProofLang::Other => "",
     }

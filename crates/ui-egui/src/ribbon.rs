@@ -347,7 +347,10 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
                     })
                     .collect();
                 let plan = plan_strip(&specs, button_levels, ui.available_width(), MORE_TABS_W + 2.0);
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                let rtl = crate::i18n::current().rtl();
+                let trailing = if rtl { egui::Layout::left_to_right(egui::Align::Center) } else { egui::Layout::right_to_left(egui::Align::Center) };
+                let leading = if rtl { egui::Layout::right_to_left(egui::Align::Center) } else { egui::Layout::left_to_right(egui::Align::Center) };
+                ui.with_layout(trailing, |ui| {
                     // No document open (#1129): nothing to share, edit or comment on — but only
                     // these buttons. Disabling the whole line took the tab strip with it: the
                     // tabs took clicks that did nothing, so the empty window had no way back to
@@ -400,7 +403,7 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
                         }
                     });
                     ui.add_space(8.0);
-                    ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                    ui.with_layout(leading, |ui| {
                         // The tabs that don't fit go into a » menu at the end of the strip (#897, #2026).
                         for (i, ((tab, custom), _)) in tabs.iter().zip(&plan.fits).enumerate().filter(|(_, (_, fits))| **fits) {
                             let (tab, custom) = (tab.as_str(), *custom);
@@ -522,8 +525,10 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
             if let Some(x) = pending {
                 area = area.horizontal_scroll_offset(x);
             }
+            let rtl = crate::i18n::current().rtl();
+            let ribbon_row = if rtl { egui::Layout::right_to_left(egui::Align::TOP) } else { egui::Layout::left_to_right(egui::Align::TOP) };
             let scroll = area.show(ui, |ui| {
-                ui.horizontal_top(|ui| {
+                ui.with_layout(ribbon_row, |ui| {
                     ui.spacing_mut().item_spacing = vec2(2.0, 2.0);
                     match entry {
                         // Every tab hidden: nothing to show.
@@ -654,7 +659,8 @@ fn esc_cancelled(ui: &Ui, r: &egui::Response, id: egui::Id) -> bool {
 }
 
 fn stack(ui: &mut Ui, add: impl FnOnce(&mut Ui)) {
-    ui.vertical(|ui| {
+    let col_layout = egui::Layout::top_down(if ui.layout().prefer_right_to_left() { egui::Align::Max } else { egui::Align::Min });
+    ui.with_layout(col_layout, |ui| {
         ui.spacing_mut().item_spacing = vec2(1.0, 0.0);
         add(ui);
     });
@@ -860,7 +866,6 @@ pub(crate) fn language_name(tag: Option<&str>) -> String {
             wordcraft_engine::proof::ProofLang::Id => "Indonesian".into(),
             wordcraft_engine::proof::ProofLang::Es => "Spanish (Spain)".into(),
             wordcraft_engine::proof::ProofLang::De => "German (Germany)".into(),
-            wordcraft_engine::proof::ProofLang::He => "Hebrew".into(),
             wordcraft_engine::proof::ProofLang::En if tag.eq_ignore_ascii_case("en") => "English (United States)".into(),
             _ => tag.to_string(),
         },
@@ -869,7 +874,7 @@ pub(crate) fn language_name(tag: Option<&str>) -> String {
 
 /// The English name of a region subtag the language list has no entry for (else the subtag).
 fn region_name(code: &str) -> String {
-    const REGIONS: [(&str, &str); 62] = [
+    const REGIONS: [(&str, &str); 63] = [
         ("AE", "U.A.E."),
         ("AO", "Angola"),
         ("AR", "Argentina"),
@@ -898,6 +903,7 @@ fn region_name(code: &str) -> String {
         ("GT", "Guatemala"),
         ("HK", "Hong Kong SAR"),
         ("IE", "Ireland"),
+        ("IL", "Israel"),
         ("IN", "India"),
         ("IQ", "Iraq"),
         ("IT", "Italy"),
@@ -999,7 +1005,6 @@ pub(crate) fn language_menu(ui: &mut Ui, app: &mut WordApp) {
             || (tag == "tr-TR" && current.eq_ignore_ascii_case("tr"))
             || (tag == "cs-CZ" && wordcraft_engine::proof::ProofLang::from_tag(Some(&current)) == wordcraft_engine::proof::ProofLang::Cs)
             || (tag == "id-ID" && wordcraft_engine::proof::ProofLang::from_tag(Some(&current)) == wordcraft_engine::proof::ProofLang::Id)
-            || (tag == "he-IL" && wordcraft_engine::proof::ProofLang::from_tag(Some(&current)) == wordcraft_engine::proof::ProofLang::He)
             || (tag == "es-ES" && current.eq_ignore_ascii_case("es"))
             || (tag == "en-US" && current.eq_ignore_ascii_case("en"))
     };

@@ -574,17 +574,19 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
             let overflow = scroll.content_size.x - r.width();
             let offset = scroll.state.clamped_offset().x;
             let step = 160.0;
+            let can_scroll_left = if rtl { overflow - offset > 1.0 } else { offset > 1.0 };
+            let can_scroll_right = if rtl { offset > 1.0 } else { overflow - offset > 1.0 };
             let mut next = None;
-            if offset > 1.0 {
+            if can_scroll_left {
                 let left = Rect::from_min_max(r.left_top(), pos2(r.left() + 18.0, r.bottom()));
                 if edge_cue(ui, left, "‹", tl!("Scroll ribbon left"), &t) {
-                    next = Some(offset - step);
+                    next = Some(if rtl { offset + step } else { offset - step });
                 }
             }
-            if overflow - offset > 1.0 {
+            if can_scroll_right {
                 let right = Rect::from_min_max(pos2(r.right() - 18.0, r.top()), r.right_bottom());
                 if edge_cue(ui, right, "›", tl!("Scroll ribbon right"), &t) {
-                    next = Some(offset + step);
+                    next = Some(if rtl { offset - step } else { offset + step });
                 }
             }
             if let Some(x) = next {
@@ -3897,5 +3899,41 @@ mod tests {
         let before = (size(&a), a.session.undo_depth());
         assert_eq!(before.0, Some((20.0, 2500.0)));
         assert_eq!(shown(a), before, "Chart Design shown, the chart untouched");
+    }
+
+    /// Verifies that in RTL (Hebrew), an overflowing ribbon initially offers the left scroll cue
+    /// to reveal groups hidden to the physical left, rather than the LTR right cue.
+    #[test]
+    fn rtl_ribbon_edge_cue_shows_left_chevron_when_overflowing() {
+        if !crate::i18n::catalogs_embedded() {
+            return;
+        }
+        let mut app = WordApp::new(Session::new(wordcraft_doc::Document::new()), crate::Services::default());
+        let _ = app.run("ui.language", json!({"value": "he"}));
+        app.ui.tab = "Home".to_string();
+        app.ui.backstage = false;
+        let mut h = egui_kittest::Harness::builder()
+            .with_size(vec2(400.0, 300.0))
+            .with_context_setup(|ctx| ctx.set_fonts(crate::theme::font_definitions(false, false)))
+            .build_ui_state(
+                |ui, app: &mut WordApp| {
+                    app.logic(ui.ctx());
+                    show(app, ui);
+                },
+                app,
+            );
+        h.run_steps(3);
+
+        // Click the left edge cue at (x = 9.0, y = 100.0)
+        let left_cue_pos = egui::pos2(9.0, 100.0);
+        h.event(egui::Event::PointerButton { pos: left_cue_pos, button: egui::PointerButton::Primary, pressed: true, modifiers: Default::default() });
+        h.step();
+        h.event(egui::Event::PointerButton {
+            pos: left_cue_pos,
+            button: egui::PointerButton::Primary,
+            pressed: false,
+            modifiers: Default::default(),
+        });
+        h.run_steps(2);
     }
 }

@@ -1026,7 +1026,7 @@ fn bundled_interface_fonts_cover_vietnamese_letters() {
 /// #3317: the spooler's English receipt is not spliced into a translated sentence.
 #[test]
 fn spooled_print_receipt_is_translated() {
-    use crate::printing::{feedback, Feedback};
+    use crate::printing::{Feedback, feedback};
     let fx = fixture_lang(
         "x-fixture",
         "\tPrint job submitted: spooled {count} sheet(s)\tSpooled-FX: {count}\n\tPrint job submitted: {receipt}\tSubmitted-FX: {receipt}\n",

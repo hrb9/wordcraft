@@ -458,11 +458,7 @@ pub fn group_titled(ui: &mut Ui, id_title: &str, title: &str, launcher: Option<&
         let inner = ui.with_layout(col_layout, |ui| {
             ui.set_min_width(label_w + if launcher.is_some() { 22.0 } else { 10.0 });
             crate::ribbon_fit::set_compact(ui.ctx(), level == crate::ribbon_fit::COMPACT);
-            let group_layout = if rtl_group {
-                egui::Layout::right_to_left(egui::Align::Min)
-            } else {
-                egui::Layout::left_to_right(egui::Align::Min)
-            };
+            let group_layout = if rtl_group { egui::Layout::right_to_left(egui::Align::Min) } else { egui::Layout::left_to_right(egui::Align::Min) };
             let content = ui.allocate_ui_with_layout(vec2(ui.available_width(), CONTENT_H), group_layout, |ui| {
                 ui.spacing_mut().item_spacing = vec2(1.0, 1.0);
                 add(ui, app);
@@ -1325,13 +1321,25 @@ pub fn icon_menu_item(ui: &mut Ui, icon: &str, text: &str, shortcut: &str, min_w
     let (line, accent) = if ui.is_enabled() { (t.icon, t.accent) } else { (t.text_disabled, t.text_disabled) };
     let text_c = if ui.is_enabled() { st.text } else { t.text_disabled };
     if ui.style().right_to_left {
-        icons::paint(ui.painter(), Rect::from_center_size(pos2(r.max.x - pad.x - icon_w / 2.0, r.center().y), vec2(icon_w, icon_w)), icon, line, accent);
+        icons::paint(
+            ui.painter(),
+            Rect::from_center_size(pos2(r.max.x - pad.x - icon_w / 2.0, r.center().y), vec2(icon_w, icon_w)),
+            icon,
+            line,
+            accent,
+        );
         ui.painter().galley(pos2(r.max.x - pad.x - icon_w - 6.0 - galley.size().x, r.center().y - galley.size().y / 2.0), galley, text_c);
         if let Some(g) = sc {
             ui.painter().galley(pos2(r.min.x + pad.x, r.center().y - g.size().y / 2.0), g, t.text_disabled);
         }
     } else {
-        icons::paint(ui.painter(), Rect::from_center_size(pos2(r.min.x + pad.x + icon_w / 2.0, r.center().y), vec2(icon_w, icon_w)), icon, line, accent);
+        icons::paint(
+            ui.painter(),
+            Rect::from_center_size(pos2(r.min.x + pad.x + icon_w / 2.0, r.center().y), vec2(icon_w, icon_w)),
+            icon,
+            line,
+            accent,
+        );
         ui.painter().galley(pos2(r.min.x + pad.x + icon_w + 6.0, r.center().y - galley.size().y / 2.0), galley, text_c);
         if let Some(g) = sc {
             ui.painter().galley(pos2(r.max.x - pad.x - g.size().x, r.center().y - g.size().y / 2.0), g, t.text_disabled);

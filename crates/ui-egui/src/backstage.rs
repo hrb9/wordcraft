@@ -40,14 +40,14 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
     }
     let mac = app.integrated_titlebar;
     let rtl = crate::i18n::current().rtl();
-    let nav_panel = if rtl && !mac { egui::Panel::right("backstage_nav") } else { egui::Panel::left("backstage_nav") };
+    let nav_panel = if rtl { egui::Panel::right("backstage_nav") } else { egui::Panel::left("backstage_nav") };
     nav_panel
         .exact_size(200.0)
         // Fixed width, as in Word: without this egui shows a resize handle that does nothing (#502).
         .resizable(false)
-        .frame(egui::Frame::NONE.fill(t.nav).inner_margin(egui::Margin { left: 0, right: 0, top: if mac { 0 } else { 12 }, bottom: 12 }))
+        .frame(egui::Frame::NONE.fill(t.nav).inner_margin(egui::Margin { left: 0, right: 0, top: if mac && !rtl { 0 } else { 12 }, bottom: 12 }))
         .show(ui, |ui| {
-            let back = if mac {
+            let back = if mac && !rtl {
                 // macOS (#222): the Backstage covers the title bar, so its top band is the title
                 // bar: the back button sits beside the traffic lights, centred with them and as far
                 // from them as the title bar's own controls, and the rest of the band drags the window.
@@ -232,7 +232,8 @@ fn heading(ui: &mut Ui, s: &str) {
 /// region-aware page preview, and creates a document from the template on click.
 fn template_tile(ui: &mut Ui, app: &mut WordApp, label: &str, template: &str) {
     let t = Tokens::get(ui.ctx());
-    ui.vertical(|ui| {
+    let col_layout = egui::Layout::top_down(if ui.layout().prefer_right_to_left() { egui::Align::Max } else { egui::Align::Min });
+    ui.with_layout(col_layout, |ui| {
         // The thumbnail and its caption are one button named by the caption, so a screen reader
         // announces "Blank document, button" rather than unnamed text (#3176); the caption opens
         // the template too, as in Word.
@@ -271,7 +272,8 @@ fn template_tile(ui: &mut Ui, app: &mut WordApp, label: &str, template: &str) {
         if let Some(h) = tex {
             ui.painter().image(h.id(), r.shrink(1.0), Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)), egui::Color32::WHITE);
         }
-        ui.painter().galley(pos2(r.min.x, r.max.y), galley, ui.visuals().text_color());
+        let gx = if ui.style().right_to_left { (r.max.x - galley.size().x).max(tile.min.x) } else { r.min.x };
+        ui.painter().galley(pos2(gx, r.max.y), galley, ui.visuals().text_color());
         if resp.clicked() {
             let _ = app.run("file.new", json!({"template": template}));
             app.ui.backstage = false;

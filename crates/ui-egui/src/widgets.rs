@@ -280,11 +280,19 @@ pub fn small(ui: &mut Ui, app: &mut WordApp, icon: &str, label: Option<&str>, ti
     keytip_badge(ui, r, id, tip);
     let on = enabled(app, id);
     bg(ui, r, &resp, checked, &t);
-    let ic = Rect::from_center_size(pos2(r.min.x + 12.0, r.center().y), vec2(17.0, 17.0));
     let (c, a) = if on { (t.icon, t.accent) } else { (t.text_disabled, t.text_disabled) };
-    icons::paint(ui.painter(), ic, icon, c, a);
-    if let Some(l) = label {
-        ui.painter().text(pos2(r.min.x + 24.0, r.center().y), Align2::LEFT_CENTER, l, regular(11.5), if on { t.text } else { t.text_disabled });
+    if ui.style().right_to_left && label.is_some() {
+        let ic = Rect::from_center_size(pos2(r.max.x - 12.0, r.center().y), vec2(17.0, 17.0));
+        icons::paint(ui.painter(), ic, icon, c, a);
+        if let Some(l) = label {
+            ui.painter().text(pos2(r.max.x - 24.0, r.center().y), Align2::RIGHT_CENTER, l, regular(11.5), if on { t.text } else { t.text_disabled });
+        }
+    } else {
+        let ic = Rect::from_center_size(pos2(r.min.x + 12.0, r.center().y), vec2(17.0, 17.0));
+        icons::paint(ui.painter(), ic, icon, c, a);
+        if let Some(l) = label {
+            ui.painter().text(pos2(r.min.x + 24.0, r.center().y), Align2::LEFT_CENTER, l, regular(11.5), if on { t.text } else { t.text_disabled });
+        }
     }
     let resp = tooltip(app, resp, tip, id);
     command_menu(&resp, app, id);
@@ -391,11 +399,19 @@ pub fn menu_button(
         let (r, resp) = ui.allocate_exact_size(vec2(24.0 + text_w + 10.0, 22.0), Sense::click());
         keytip_badge(ui, r, "menu", tip);
         bg(ui, r, &resp, false, &t);
-        icons::paint(ui.painter(), Rect::from_center_size(pos2(r.min.x + 12.0, r.center().y), vec2(17.0, 17.0)), icon, c, a);
-        if let Some(l) = label {
-            ui.painter().text(pos2(r.min.x + 24.0, r.center().y), Align2::LEFT_CENTER, l, regular(11.5), text);
+        if ui.style().right_to_left {
+            icons::paint(ui.painter(), Rect::from_center_size(pos2(r.max.x - 12.0, r.center().y), vec2(17.0, 17.0)), icon, c, a);
+            if let Some(l) = label {
+                ui.painter().text(pos2(r.max.x - 24.0, r.center().y), Align2::RIGHT_CENTER, l, regular(11.5), text);
+            }
+            icons::paint(ui.painter(), Rect::from_center_size(pos2(r.min.x + 6.0, r.center().y), vec2(DROPDOWN, DROPDOWN)), "dropdown", c, c);
+        } else {
+            icons::paint(ui.painter(), Rect::from_center_size(pos2(r.min.x + 12.0, r.center().y), vec2(17.0, 17.0)), icon, c, a);
+            if let Some(l) = label {
+                ui.painter().text(pos2(r.min.x + 24.0, r.center().y), Align2::LEFT_CENTER, l, regular(11.5), text);
+            }
+            icons::paint(ui.painter(), Rect::from_center_size(pos2(r.max.x - 6.0, r.center().y), vec2(DROPDOWN, DROPDOWN)), "dropdown", c, c);
         }
-        icons::paint(ui.painter(), Rect::from_center_size(pos2(r.max.x - 6.0, r.center().y), vec2(DROPDOWN, DROPDOWN)), "dropdown", c, c);
         resp
     };
     let reason = if on { None } else { Some(app.session.why_disabled(id).unwrap_or("")) };
@@ -437,10 +453,17 @@ pub fn group_titled(ui: &mut Ui, id_title: &str, title: &str, launcher: Option<&
         // Not folded: a drop-down left open while it was folded doesn't come back by itself.
         ui.data_mut(|d| d.remove::<bool>(collapsed_open_id(ui, id_title, position)));
         let label_w = ui.ctx().fonts_mut(|f| f.layout_no_wrap(title.to_string(), regular(11.0), t.group_label).size().x);
-        let inner = ui.vertical(|ui| {
+        let rtl_group = ui.layout().prefer_right_to_left();
+        let col_layout = egui::Layout::top_down(if rtl_group { egui::Align::Max } else { egui::Align::Min });
+        let inner = ui.with_layout(col_layout, |ui| {
             ui.set_min_width(label_w + if launcher.is_some() { 22.0 } else { 10.0 });
             crate::ribbon_fit::set_compact(ui.ctx(), level == crate::ribbon_fit::COMPACT);
-            let content = ui.allocate_ui_with_layout(vec2(ui.available_width(), CONTENT_H), egui::Layout::left_to_right(egui::Align::Min), |ui| {
+            let group_layout = if rtl_group {
+                egui::Layout::right_to_left(egui::Align::Min)
+            } else {
+                egui::Layout::left_to_right(egui::Align::Min)
+            };
+            let content = ui.allocate_ui_with_layout(vec2(ui.available_width(), CONTENT_H), group_layout, |ui| {
                 ui.spacing_mut().item_spacing = vec2(1.0, 1.0);
                 add(ui, app);
             });
@@ -476,7 +499,8 @@ fn title_row(ui: &mut Ui, r: Rect, id_title: &str, title: &str, launcher: Option
     let title_y = r.center().y;
     ui.painter().text(pos2(r.center().x, title_y), Align2::CENTER_CENTER, title, regular(11.0), t.group_label);
     if let Some(cmd) = launcher {
-        let lr = Rect::from_center_size(pos2(r.max.x - 6.0, title_y), vec2(11.0, 11.0));
+        let lx = if ui.style().right_to_left { r.min.x + 6.0 } else { r.max.x - 6.0 };
+        let lr = Rect::from_center_size(pos2(lx, title_y), vec2(11.0, 11.0));
         let resp = ui.interact(lr, ui.scope_id().with(("launch", id_title)), Sense::click());
         if resp.hovered() {
             ui.painter().rect_filled(lr.expand(2.0), 2.0, t.hover);
@@ -1300,10 +1324,18 @@ pub fn icon_menu_item(ui: &mut Ui, icon: &str, text: &str, shortcut: &str, min_w
     ui.painter().rect_filled(r, ui.visuals().widgets.inactive.corner_radius, st.fill);
     let (line, accent) = if ui.is_enabled() { (t.icon, t.accent) } else { (t.text_disabled, t.text_disabled) };
     let text_c = if ui.is_enabled() { st.text } else { t.text_disabled };
-    icons::paint(ui.painter(), Rect::from_center_size(pos2(r.min.x + pad.x + icon_w / 2.0, r.center().y), vec2(icon_w, icon_w)), icon, line, accent);
-    ui.painter().galley(pos2(r.min.x + pad.x + icon_w + 6.0, r.center().y - galley.size().y / 2.0), galley, text_c);
-    if let Some(g) = sc {
-        ui.painter().galley(pos2(r.max.x - pad.x - g.size().x, r.center().y - g.size().y / 2.0), g, t.text_disabled);
+    if ui.style().right_to_left {
+        icons::paint(ui.painter(), Rect::from_center_size(pos2(r.max.x - pad.x - icon_w / 2.0, r.center().y), vec2(icon_w, icon_w)), icon, line, accent);
+        ui.painter().galley(pos2(r.max.x - pad.x - icon_w - 6.0 - galley.size().x, r.center().y - galley.size().y / 2.0), galley, text_c);
+        if let Some(g) = sc {
+            ui.painter().galley(pos2(r.min.x + pad.x, r.center().y - g.size().y / 2.0), g, t.text_disabled);
+        }
+    } else {
+        icons::paint(ui.painter(), Rect::from_center_size(pos2(r.min.x + pad.x + icon_w / 2.0, r.center().y), vec2(icon_w, icon_w)), icon, line, accent);
+        ui.painter().galley(pos2(r.min.x + pad.x + icon_w + 6.0, r.center().y - galley.size().y / 2.0), galley, text_c);
+        if let Some(g) = sc {
+            ui.painter().galley(pos2(r.max.x - pad.x - g.size().x, r.center().y - g.size().y / 2.0), g, t.text_disabled);
+        }
     }
     resp
 }

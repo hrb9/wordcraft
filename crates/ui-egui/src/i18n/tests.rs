@@ -1026,7 +1026,7 @@ fn bundled_interface_fonts_cover_vietnamese_letters() {
 /// #3317: the spooler's English receipt is not spliced into a translated sentence.
 #[test]
 fn spooled_print_receipt_is_translated() {
-    use crate::printing::{Feedback, feedback};
+    use crate::printing::{feedback, Feedback};
     let fx = fixture_lang(
         "x-fixture",
         "\tPrint job submitted: spooled {count} sheet(s)\tSpooled-FX: {count}\n\tPrint job submitted: {receipt}\tSubmitted-FX: {receipt}\n",
@@ -1180,4 +1180,58 @@ fn the_flatpak_manifest_pins_the_craft_i18n_rev() {
     let commit = source.lines().find_map(|l| l.trim().strip_prefix("commit:")).expect("the craft-i18n source pins a commit");
     assert_eq!(commit.trim().trim_matches(['\'', '"']), rev);
     assert!(manifest.contains("CRAFT_I18N_DIR: /run/build/wordcraft/craft-i18n"), "the build embeds the catalogs");
+}
+
+/// Verifies that in Hebrew (`he`), the Home ribbon groups and the Backstage Home template tiles
+/// flow from right to left without overlapping on the left edge.
+#[test]
+fn hebrew_ribbon_and_backstage_home_lay_out_from_right_to_left() {
+    needs_catalogs!();
+    let mut app = crate::WordApp::new(wordcraft_engine::Session::new(wordcraft_doc::Document::new()), Default::default());
+    app.run("ui.language", serde_json::json!({"value": "he"})).unwrap();
+    let ctx = egui::Context::default();
+    let screen = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(1600.0, 900.0));
+    fn collect_texts(shape: &egui::Shape, out: &mut Vec<(String, egui::Pos2)>) {
+        match shape {
+            egui::Shape::Text(t) => out.push((t.galley.text().to_string(), t.pos)),
+            egui::Shape::Vec(v) => v.iter().for_each(|s| collect_texts(s, out)),
+            _ => {}
+        }
+    }
+    let run_frames = |app: &mut crate::WordApp| -> Vec<(String, egui::Pos2)> {
+        let mut drawn = Vec::new();
+        for _ in 0..3 {
+            let input = egui::RawInput { screen_rect: Some(screen), ..Default::default() };
+            let mut out = ctx.run_ui(input, |ui| {
+                app.logic(ui.ctx());
+                app.ui(ui);
+            });
+            drawn.clear();
+            for s in &out.shapes {
+                collect_texts(&s.shape, &mut drawn);
+            }
+            out.textures_delta.clear();
+        }
+        drawn
+    };
+
+    // 1. Backstage Home (no document open initially -> backstage = true)
+    app.ui.backstage = true;
+    app.ui.backstage_page = "home".into();
+    let bs_texts = run_frames(&mut app);
+    let blank_x = bs_texts.iter().find(|(t, _)| t == "מסמך ריק").map(|(_, p)| p.x).expect("מסמך ריק");
+    let letter_x = bs_texts.iter().find(|(t, _)| t == "מכתב").map(|(_, p)| p.x).expect("מכתב");
+    assert!(blank_x > letter_x + 100.0, "blank template ({blank_x}) must sit to the right of letter template ({letter_x})");
+
+    // 2. Home Ribbon
+    app.ui.backstage = false;
+    app.ui.tab = "Home".into();
+    let rib_texts = run_frames(&mut app);
+    let clip_x = rib_texts.iter().find(|(t, p)| t == "לוח עריכה" && p.y < 160.0).map(|(_, p)| p.x).expect("לוח עריכה");
+    let font_x = rib_texts.iter().find(|(t, p)| t == "גופן" && p.y < 160.0).map(|(_, p)| p.x).expect("גופן");
+    let para_x = rib_texts.iter().find(|(t, p)| t == "פסקה" && p.y < 160.0).map(|(_, p)| p.x).expect("פסקה");
+    let styles_x = rib_texts.iter().find(|(t, p)| t == "סגנונות" && p.y < 160.0).map(|(_, p)| p.x).expect("סגנונות");
+    assert!(clip_x > font_x + 50.0, "Clipboard ({clip_x}) must sit to the right of Font ({font_x})");
+    assert!(font_x > para_x + 50.0, "Font ({font_x}) must sit to the right of Paragraph ({para_x})");
+    assert!(para_x > styles_x + 50.0, "Paragraph ({para_x}) must sit to the right of Styles ({styles_x})");
 }
